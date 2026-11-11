@@ -471,6 +471,33 @@ body,
   color: var(--slate-muted);
 }
 
+.footnote-promise a {
+  color: var(--forest-ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.notify-submit-btn:disabled {
+  opacity: 0.72;
+  cursor: progress;
+}
+
+.form-error-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #B42318;
+}
+
+/* Spam trap: kept off-screen instead of display:none so simple bots still fill it in. */
+.form-honeypot {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
 .clean-confirmed-pill {
   display: inline-flex;
   align-items: center;
@@ -657,6 +684,11 @@ body,
   .notify-submit-btn {
     width: 100%;
     height: 48px;
+  }
+
+  /* The desktop row's flex: 1 collapses the input's height once the row stacks. */
+  .email-input-field {
+    flex: none;
   }
 
   .seamless-3d-canvas-layer {

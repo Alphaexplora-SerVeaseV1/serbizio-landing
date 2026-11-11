@@ -4,6 +4,7 @@ import { ArrowRight } from 'lucide-react';
 import { StageWord } from './types';
 import { SerbizioHomeScene } from './components/SerbizioHomeScene';
 import { ConfettiOverlay2D } from './components/ConfettiBurst';
+import { joinWaitlist, PRIVACY_URL } from './waitlist';
 
 const WORDS: StageWord[] = ['door', 'home', 'street', 'barangay', 'neighborhood'];
 
@@ -13,6 +14,10 @@ export const App: React.FC = () => {
   const [celebrationTick, setCelebrationTick] = useState<number>(0);
   const [email, setEmail] = useState<string>('');
   const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // Hidden from people; only bots fill it in. The backend ignores those sign-ups.
+  const [honeypot, setHoneypot] = useState<string>('');
 
   // Refs for GSAP animations
   const pageRef = useRef<HTMLDivElement>(null);
@@ -127,9 +132,21 @@ export const App: React.FC = () => {
     setPulseTick((t) => t + 1);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const clean = email.trim() || 'homeowner@serbizio.com.ph';
+    const clean = email.trim();
+    if (!clean || isSaving) return;
+
+    setIsSaving(true);
+    setErrorMessage(null);
+    const result = await joinWaitlist(clean, honeypot);
+    setIsSaving(false);
+    if (!result.ok) {
+      setErrorMessage(result.message);
+      return;
+    }
+
+    // Only celebrate once the email is actually saved.
     setWordIndex(0); // Focus on 'door' as we fly to the front door
     setSubmittedEmail(clean);
     setPulseTick((t) => t + 1);
@@ -227,9 +244,16 @@ export const App: React.FC = () => {
                 <input
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (errorMessage) setErrorMessage(null);
+                  }}
                   placeholder="Your email"
                   aria-label="Your email"
+                  aria-invalid={errorMessage ? true : undefined}
+                  aria-describedby={errorMessage ? 'waitlist-error' : 'waitlist-promise'}
+                  autoComplete="email"
+                  maxLength={254}
                   className="email-input-field"
                   required
                 />
@@ -239,14 +263,39 @@ export const App: React.FC = () => {
                   onMouseMove={handleBtnMove}
                   onMouseLeave={handleBtnLeave}
                   className="notify-submit-btn"
+                  disabled={isSaving}
+                  aria-busy={isSaving}
                 >
-                  <span>Notify me</span>
+                  <span>{isSaving ? 'Saving…' : 'Notify me'}</span>
                   <ArrowRight size={18} />
                 </button>
               </div>
 
-              <p className="footnote-promise">
-                One email on launch day. Nothing else.
+              <div className="form-honeypot" aria-hidden="true">
+                <label>
+                  Website
+                  <input
+                    type="text"
+                    name="website"
+                    tabIndex={-1}
+                    autoComplete="off"
+                    value={honeypot}
+                    onChange={(e) => setHoneypot(e.target.value)}
+                  />
+                </label>
+              </div>
+
+              {errorMessage && (
+                <p id="waitlist-error" className="form-error-text" role="alert">
+                  {errorMessage}
+                </p>
+              )}
+
+              <p id="waitlist-promise" className="footnote-promise">
+                One email on launch day. Nothing else.{' '}
+                <a href={PRIVACY_URL} target="_blank" rel="noopener noreferrer">
+                  Privacy policy
+                </a>
               </p>
             </form>
           </section>
